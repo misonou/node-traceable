@@ -4,7 +4,7 @@
     },
     "name": "traceable",
     "description": "Capture, parse and format V8 stack trace.",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "author": "misonou",
     "license": "MIT",
     "keywords": [
