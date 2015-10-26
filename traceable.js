@@ -141,12 +141,13 @@ function StackFrame(input, options) {
             });
         }
     } else {
+        var thisArg = input.getThis();
         define(this, '_evalOrigin', input.isEval() ? input.getEvalOrigin() : null);
         copy(this, {
             rawString: input.toString(),
             native: input.isNative(),
             isConstructor: input.isConstructor(),
-            typeName: input.getTypeName() || '',
+            typeName: (thisArg !== undefined && thisArg !== null && input.getTypeName()) || '',
             rawFunctionName: input.getFunctionName() || '',
             fileName: input.isNative() ? null : input.getFileName() || '<anonymous>',
             lineNumber: input.getLineNumber() || null,
@@ -214,7 +215,7 @@ Formatter.prototype = {
         return 'at ' + (v.functionName ? v.functionName + ' (' + v.source + ')' : v.source);
     },
     formatSource: function (v, options) {
-        return this.native ? 'native' : v.fileName + ':' + v.lineNumber + (options.showColumnNumber ? ':' + v.columnNumber : '');
+        return v.native ? 'native' : v.fileName + ':' + v.lineNumber + (options.showColumnNumber ? ':' + v.columnNumber : '');
     },
     formatEvalOrigin: function (v, options) {
         return ' eval at ' + v.source;
