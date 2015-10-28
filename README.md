@@ -111,16 +111,20 @@ Unless `showRawFunctionName` is set to `true`, function names are manipulated as
 Blackboxing, similar to the node inspector interface, can hide frames from certain source file
 as specified.
 
-Paths can be absolute or relative to the **innermost** node_modules folder.
+Paths can be:
+-   names to built-in modules: `fs.js`
+-   relative to the **innermost** node_modules folder
+-   relative to directory of the main module
+-   relative to process working directory
 
-For node modules, `/path/to/program/node_modules/my-mod/node_modules/nested/util/x.js`
-can be blackboxed by:
+If a path resolves to a folder, all scripts under that folder will be blackboxed.
+Thus:
 
--   `nested/util/x.js`
--   `nested/util`
+`/path/to/program/node_modules/my-mod/node_modules/nested/util/x.js`
+can be blackboxed by one of the following path:
+-   `nested/util/x.js`,
+-   `nested/util`,
 -   `nested`
-
-For built-in modules, specified their file names directly, e.g. `fs.js`.
 
 ### traceable.StackTrace
 

@@ -1,9 +1,11 @@
 /*jshint node:true */
 
-var sep = require('path').sep;
+var path = require('path');
 var needles = {};
 var reFn = /^(?:([^\.\[\(\s]+)(?:\.+([^\.\[\(\s]+))*)?(?:\s*\[as\s*([^\]]+)\])?$/;
 var reEval = /^(?:eval |\s*)?at (?:(new )?((?:\((?!eval at )|[^\(])+) \()?(?:native|null|(?:(.+), )?(.+):(\d+):(\d+))\)?$/;
+var maindir = require.main && path.dirname(require.main.filename);
+var cwd = process.cwd();
 
 function define(obj, prop, value) {
     Object.defineProperty(obj, prop, {
@@ -33,19 +35,33 @@ function prepRawFrames(str) {
     });
 }
 
+function splatNeedles(source) {
+    var arr = [];
+    source.forEach(function (v) {
+        arr.unshift(arr[0] ? arr[0] + '/' + v : v);
+    });
+    return arr;
+}
+
+function subpath(from, to) {
+    var p = path.relative(from, to);
+    return (p.substr(0, 3) !== '..' + path.sep) && p;
+}
+
 function computeNeedles(filename) {
-    filename = (filename || '').toLowerCase();
+    filename = filename || '';
     return needles[filename] || (function (cache) {
-        var arr = filename.split(sep);
+        var arr = filename.split(path.sep);
         var idx = (arr.lastIndexOf('node_modules') + 1) || (arr.lastIndexOf('.node_modules') + 1);
-        var needles = [filename];
-        if (idx > 0) {
-            arr.slice(idx).forEach(function (v) {
-                needles.splice(1, 0, needles[1] ? needles[1] + '/' + v : v);
-            });
+        var rel = idx || (maindir && subpath(maindir, filename)) || subpath(cwd, filename);
+        if (idx) {
+            cache[filename] = splatNeedles(arr.slice(idx));
+        } else if (rel) {
+            cache[filename] = splatNeedles(rel.split(path.sep));
+        } else {
+            cache[filename] = [];
         }
-        cache[filename] = needles;
-        return needles;
+        return cache[filename];
     }(needles));
 }
 
@@ -158,7 +174,7 @@ function StackFrame(input, options) {
         this.asyncOrigin = new StackTrace(input.asyncOrigin, options);
     }
     if (!options.showFullPath) {
-        this.fileName = computeNeedles(this.fileName)[1] || this.fileName;
+        this.fileName = computeNeedles(this.fileName)[0] || this.fileName;
     }
     define(this, '_options', options);
 }
