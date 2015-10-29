@@ -54,7 +54,7 @@ function splatNeedles(source) {
 function subpath(to) {
     for (var i in relPaths) {
         var p = path.relative(relPaths[i], to);
-        if (p.substr(0, 3) !== '..' + path.sep) {
+        if (p.substr(0, 3) !== '..' + path.sep && p.substr(0, 3) !== to.substr(0, 3)) {
             return p;
         }
     }
