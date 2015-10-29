@@ -83,7 +83,11 @@ Below is an exhausive list of options, with the default value shown.
 #### Paths to source files
 
 Unless `showFullPath` is set to `true`, paths to source files are stripped as
-relative to the innermost `node_modules` folder if applicable:
+relative to:
+-   the **innermost** `node_modules` folder
+-   any of the global module paths
+-   directory of the main module
+-   process working directory
 
 `/path/to/node_modules/my-mod/node_modules/traceable/traceable.js` is resolved as `traceable/traceable.js`
 
@@ -113,7 +117,8 @@ as specified.
 
 Paths can be:
 -   names to built-in modules: `fs.js`
--   relative to the **innermost** node_modules folder
+-   relative to the **innermost** `node_modules` folder
+-   relative to any of the global module paths
 -   relative to directory of the main module
 -   relative to process working directory
 

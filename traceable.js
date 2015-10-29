@@ -1,11 +1,19 @@
 /*jshint node:true */
 
+var Module = require('module');
 var path = require('path');
 var needles = {};
 var reFn = /^(?:([^\.\[\(\s]+)(?:\.+([^\.\[\(\s]+))*)?(?:\s*\[as\s*([^\]]+)\])?$/;
 var reEval = /^(?:eval |\s*)?at (?:(new )?((?:\((?!eval at )|[^\(])+) \()?(?:native|null|(?:(.+), )?(.+):(\d+):(\d+))\)?$/;
-var maindir = require.main && path.dirname(require.main.filename);
-var cwd = process.cwd();
+var relPaths = Module.globalPaths.slice(0);
+
+relPaths.push(process.cwd());
+if (require.main) {
+    relPaths.push(path.dirname(require.main.filename));
+}
+relPaths.sort(function (x, y) {
+    return y.length - x.length;
+});
 
 function define(obj, prop, value) {
     Object.defineProperty(obj, prop, {
@@ -43,26 +51,32 @@ function splatNeedles(source) {
     return arr;
 }
 
-function subpath(from, to) {
-    var p = path.relative(from, to);
-    return (p.substr(0, 3) !== '..' + path.sep) && p;
+function subpath(to) {
+    for (var i in relPaths) {
+        var p = path.relative(relPaths[i], to);
+        if (p.substr(0, 3) !== '..' + path.sep) {
+            return p;
+        }
+    }
 }
 
 function computeNeedles(filename) {
     filename = filename || '';
-    return needles[filename] || (function (cache) {
+    return needles[filename] || (function () {
         var arr = filename.split(path.sep);
-        var idx = (arr.lastIndexOf('node_modules') + 1) || (arr.lastIndexOf('.node_modules') + 1);
-        var rel = idx || (maindir && subpath(maindir, filename)) || subpath(cwd, filename);
-        if (idx) {
-            cache[filename] = splatNeedles(arr.slice(idx));
+        var idx = arr.lastIndexOf('node_modules') + 1;
+        var rel = idx || subpath(filename);
+        if (arr.length === 1) {
+            needles[filename] = [filename];
+        } else if (idx) {
+            needles[filename] = splatNeedles(arr.slice(idx));
         } else if (rel) {
-            cache[filename] = splatNeedles(rel.split(path.sep));
+            needles[filename] = splatNeedles(rel.split(path.sep));
         } else {
-            cache[filename] = [];
+            needles[filename] = [];
         }
-        return cache[filename];
-    }(needles));
+        return needles[filename];
+    }());
 }
 
 function isBlackBoxed(filename, arr) {
@@ -127,12 +141,17 @@ function prepAsyncStack(skipFrame) {
 }
 
 function StackTrace(frames, options) {
+    var asyncOrigin;
     define(this, '_options', options);
     Array.prototype.push.apply(this, frames.map(function (v) {
         return new StackFrame(v, options);
     }).filter(function (v) {
-        return !Array.isArray(options.blackbox) || !isBlackBoxed(v.fileName, options.blackbox);
+        asyncOrigin = v.asyncOrigin;
+        return !Array.isArray(options.blackbox) || !isBlackBoxed(v.filePath, options.blackbox);
     }));
+    if (asyncOrigin) {
+        this[this.length - 1].asyncOrigin = asyncOrigin;
+    }
 }
 StackTrace.prototype = Object.create(Array.prototype);
 StackTrace.prototype.toString = function () {
@@ -151,7 +170,7 @@ function StackFrame(input, options) {
                 isConstructor: !!RegExp.$1,
                 typeName: posDot > 0 ? fn.substr(0, posDot) : '',
                 rawFunctionName: fn.substr(posDot + 1),
-                fileName: RegExp.$4 || null,
+                filePath: RegExp.$4 || null,
                 lineNumber: RegExp.$5 || null,
                 columnNumber: RegExp.$6 || null
             });
@@ -165,7 +184,7 @@ function StackFrame(input, options) {
             isConstructor: input.isConstructor(),
             typeName: (thisArg !== undefined && thisArg !== null && input.getTypeName()) || '',
             rawFunctionName: input.getFunctionName() || '',
-            fileName: input.isNative() ? null : input.getFileName() || '<anonymous>',
+            filePath: input.isNative() ? null : input.getFileName() || '<anonymous>',
             lineNumber: input.getLineNumber() || null,
             columnNumber: input.getColumnNumber() || null
         });
@@ -173,9 +192,7 @@ function StackFrame(input, options) {
     if (input.asyncOrigin) {
         this.asyncOrigin = new StackTrace(input.asyncOrigin, options);
     }
-    if (!options.showFullPath) {
-        this.fileName = computeNeedles(this.fileName)[0] || this.fileName;
-    }
+    this.fileName = (!options.showFullPath && computeNeedles(this.filePath)[0]) || this.filePath;
     define(this, '_options', options);
 }
 StackFrame.prototype = {
