@@ -1,3 +1,7 @@
+## v0.2.1 / 2016-08-06
+- Fix exception when all frames are blackboxed
+- Fix handling for multiline error message
+
 ## v0.2.0 / 2015-10-29
 
 - Blackbox path now recognizes all global module paths

@@ -142,13 +142,17 @@ function prepAsyncStack(skipFrame) {
 
 function StackTrace(frames, options) {
     var asyncOrigin;
-    define(this, '_options', options);
-    Array.prototype.push.apply(this, frames.map(function (v) {
+    frames = frames.map(function (v) {
         return new StackFrame(v, options);
-    }).filter(function (v) {
+    });
+    define(this, '_options', options);
+    Array.prototype.push.apply(this, frames.filter(function (v) {
         asyncOrigin = v.asyncOrigin;
         return !Array.isArray(options.blackbox) || !isBlackBoxed(v.filePath, options.blackbox);
     }));
+    if (!this.length) {
+        Array.prototype.push.call(this, frames[0]);
+    }
     if (asyncOrigin) {
         this[this.length - 1].asyncOrigin = asyncOrigin;
     }
@@ -294,6 +298,11 @@ module.exports = exports = function traceable(v, options) {
 
     var frames;
     if (v && v.stack) {
+        var stack = v.stack;
+        if (v.name && stack.substr(0, v.name.length) === v.name) {
+            stack = stack.substr(v.name.length).replace(/^:\s*/, '');
+        }
+        stack = stack.substr((v.message || '').length);
         frames = prepRawFrames(v.stack);
         if (v.asyncStack) {
             frames[frames.length - 1].asyncOrigin = prepRawFrames(v.asyncStack);
