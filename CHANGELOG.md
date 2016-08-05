@@ -1,4 +1,4 @@
-## v0.2.1 / 2016-08-06
+## v0.2.2 / 2016-08-06
 - Fix exception when all frames are blackboxed
 - Fix handling for multiline error message
 
