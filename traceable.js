@@ -6,6 +6,7 @@ var needles = {};
 var reFn = /^(?:([^\.\[\(\s]+)(?:\.+([^\.\[\(\s]+))*)?(?:\s*\[as\s*([^\]]+)\])?$/;
 var reEval = /^(?:eval |\s*)?at (?:(new )?((?:\((?!eval at )|[^\(])+) \()?(?:native|null|(?:(.+), )?(.+):(\d+):(\d+))\)?$/;
 var relPaths = Module.globalPaths.slice(0);
+var push = Array.prototype.push;
 
 relPaths.push(process.cwd());
 if (require.main) {
@@ -142,16 +143,21 @@ function prepAsyncStack(skipFrame) {
 
 function StackTrace(frames, options) {
     var asyncOrigin;
+    define(this, '_options', options);
     frames = frames.map(function (v) {
         return new StackFrame(v, options);
     });
-    define(this, '_options', options);
-    Array.prototype.push.apply(this, frames.filter(function (v) {
+    frames.forEach(function (v, i) {
+        if (!Array.isArray(options.blackbox) || !isBlackBoxed(v.filePath, options.blackbox)) {
+            if (!this.length && i > 0) {
+                push.call(this, frames[i - 1]);
+            }
+            push.call(this, v);
+        }
         asyncOrigin = v.asyncOrigin;
-        return !Array.isArray(options.blackbox) || !isBlackBoxed(v.filePath, options.blackbox);
-    }));
+    });
     if (!this.length) {
-        Array.prototype.push.call(this, frames[0]);
+        push.call(this, frames[0]);
     }
     if (asyncOrigin) {
         this[this.length - 1].asyncOrigin = asyncOrigin;
@@ -303,7 +309,7 @@ module.exports = exports = function traceable(v, options) {
             stack = stack.substr(v.name.length).replace(/^:\s*/, '');
         }
         stack = stack.substr((v.message || '').length);
-        frames = prepRawFrames(v.stack);
+        frames = prepRawFrames(stack);
         if (v.asyncStack) {
             frames[frames.length - 1].asyncOrigin = prepRawFrames(v.asyncStack);
         }
