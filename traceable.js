@@ -127,7 +127,7 @@ function captureV8StackTrace(belowFn, skipFrame) {
 function prepAsyncStack(skipFrame) {
     var st = new Error();
     var async;
-    setImmediate(function () {
+    process.nextTick(function () {
         async = true;
     });
     return function (err) {

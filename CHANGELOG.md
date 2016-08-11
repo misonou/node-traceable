@@ -1,8 +1,9 @@
-## v0.2.3 / 2016-08-10
+## v0.2.4 / 2016-08-11
 
 - If topmost frames are blackboxed, the last blackboxed frame above the
   visible frames are always shown (unblackboxed) to avoid confusion about actual raised location
 - Fix handling for multiline error message
+- Fix `prepAsyncStack()` does not work as expected in `process.nextTick` callback.
 
 ## v0.2.2 / 2016-08-06
 
