@@ -1,6 +1,6 @@
 {
   "name": "traceable",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Capture, parse and format V8 stack trace.",
   "main": "traceable.js",
   "scripts": {
